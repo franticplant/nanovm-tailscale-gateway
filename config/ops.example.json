@@ -8,12 +8,14 @@
     "-state-dir", "/data/tailscale",
     "-routes", "10.231.10.0/24,10.231.20.0/24"
   ],
-  "Mounts": {
-    "gw-state": "/data"
+  "MapDirs": {
+    "rootfs/*": "/"
   },
-  "BaseVolumeSz": "128m",
   "ManifestPassthrough": {
     "readonly_rootfs": "t",
+    "mounts": {
+      "gw-state": "/data"
+    },
     "en2": {
       "ipaddr": "10.231.10.1",
       "netmask": "255.255.255.0"

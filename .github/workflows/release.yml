@@ -76,7 +76,7 @@ jobs:
           (cd build && sha256sum gateway gateway.img gateway.qcow2 build-info.json > SHA256SUMS)
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             build/gateway

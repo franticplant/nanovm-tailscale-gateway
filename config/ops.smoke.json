@@ -9,7 +9,7 @@
     "-routes", "10.231.10.0/24",
     "-smoke=true"
   ],
-  "BaseVolumeSz": "128m",
+  "BaseVolumeSz": "48m",
   "ManifestPassthrough": {
     "en2": {
       "ipaddr": "10.231.10.1",

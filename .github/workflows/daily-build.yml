@@ -62,12 +62,15 @@ jobs:
           ./scripts/smoke-qemu.sh build/gateway-smoke.img
 
       - name: Package nightly artifacts
+        id: meta
         run: |
           source config/versions.env
           export PATH="${HOME}/.ops/bin:${PATH}"
           ops build build/gateway --nanos-version "${NANOS_VERSION}" -c config/ops.example.json -i gateway-nightly
           cp "${HOME}/.ops/images/gateway-nightly" build/gateway-nightly.img
           qemu-img convert -f raw -O qcow2 -c build/gateway-nightly.img build/gateway-nightly.qcow2
+          BUILD_DATE="$(date -u +%Y-%m-%d)"
+          echo "date=${BUILD_DATE}" >> "$GITHUB_OUTPUT"
           cat > build/build-info.json <<EOF
           {
             "channel": "nightly",
@@ -80,7 +83,7 @@ jobs:
           (cd build && sha256sum gateway gateway-nightly.img gateway-nightly.qcow2 build-info.json > SHA256SUMS)
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             build/gateway
@@ -92,7 +95,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: nightly
-          name: "Nightly build ($(date -u +%Y-%m-%d))"
+          name: "Nightly build (${{ steps.meta.outputs.date }})"
           prerelease: true
           make_latest: false
           generate_release_notes: true
