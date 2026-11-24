@@ -1,0 +1,46 @@
+name: Check Nanos upstream updates
+
+on:
+  schedule:
+    - cron: "0 5 * * *" # Daily at 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-nanos:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check latest Nanos kernel release
+        id: check
+        run: |
+          source config/versions.env
+          LATEST_NANOS="$(curl -fsSL https://api.github.com/repos/nanovms/nanos/releases/latest | jq -r '.tag_name' | sed 's/^v//')"
+          echo "current=${NANOS_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST_NANOS}" >> "$GITHUB_OUTPUT"
+          if [ -n "${LATEST_NANOS}" ] && [ "${LATEST_NANOS}" != "null" ] && [ "${LATEST_NANOS}" != "${NANOS_VERSION}" ]; then
+            sed -i "s/^NANOS_VERSION=.*/NANOS_VERSION=${LATEST_NANOS}/" config/versions.env
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open PR for new Nanos release
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "deps: bump Nanos kernel to ${{ steps.check.outputs.latest }}"
+          title: "deps: bump Nanos kernel from ${{ steps.check.outputs.current }} to ${{ steps.check.outputs.latest }}"
+          body: |
+            Automated upstream Nanos kernel version bump.
+            CI will build the static binary, package the Nanos image, and run the QEMU boot smoke test before merge.
+          branch: "deps/nanos-${{ steps.check.outputs.latest }}"
+          labels: |
+            dependencies
+            nanos

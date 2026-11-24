@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go-test:
+    name: Go vet, test (-race), and govulncheck
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Go vet
+        run: go vet ./...
+
+      - name: Go test (-race)
+        run: go test -race -v ./...
+
+      - name: Install and run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  nanos-smoke:
+    name: Nanos image build & QEMU boot smoke test
+    runs-on: ubuntu-24.04
+    needs: [go-test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 qemu-utils
+
+      - name: Build static amd64 gateway binary
+        run: |
+          mkdir -p build
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o build/gateway ./cmd/gateway
+          sha256sum build/gateway
+
+      - name: Install OPS and pinned Nanos kernel
+        run: |
+          source config/versions.env
+          mkdir -p "${HOME}/.ops/bin"
+          curl -fsSL https://storage.googleapis.com/cli/linux/ops -o "${HOME}/.ops/bin/ops"
+          chmod +x "${HOME}/.ops/bin/ops"
+          export PATH="${HOME}/.ops/bin:${PATH}"
+          ops version
+          ops update --version "${NANOS_VERSION}" || ops update
+
+      - name: Build Nanos smoke image
+        run: |
+          source config/versions.env
+          export PATH="${HOME}/.ops/bin:${PATH}"
+          ops build build/gateway --nanos-version "${NANOS_VERSION}" -c config/ops.smoke.json -i gateway-smoke
+          cp "${HOME}/.ops/images/gateway-smoke" build/gateway-smoke.img
+
+      - name: Boot Nanos image in QEMU and verify SMOKE_TEST_OK
+        env:
+          SMOKE_TIMEOUT_SECS: "60"
+        run: ./scripts/smoke-qemu.sh build/gateway-smoke.img

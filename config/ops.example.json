@@ -1,0 +1,26 @@
+{
+  "Env": {
+    "HOME": "/data",
+    "TS_LOGS_DIR": "/data/tailscale"
+  },
+  "Args": [
+    "-hostname", "nanos-tsnet-gateway",
+    "-state-dir", "/data/tailscale",
+    "-routes", "10.231.10.0/24,10.231.20.0/24"
+  ],
+  "Mounts": {
+    "gw-state": "/data"
+  },
+  "BaseVolumeSz": "128m",
+  "ManifestPassthrough": {
+    "readonly_rootfs": "t",
+    "en2": {
+      "ipaddr": "10.231.10.1",
+      "netmask": "255.255.255.0"
+    },
+    "en3": {
+      "ipaddr": "10.231.20.1",
+      "netmask": "255.255.255.0"
+    }
+  }
+}

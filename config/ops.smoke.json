@@ -1,0 +1,19 @@
+{
+  "Env": {
+    "HOME": "/tmp",
+    "TS_LOGS_DIR": "/tmp/tailscale"
+  },
+  "Args": [
+    "-hostname", "nanos-gateway-smoke",
+    "-state-dir", "/tmp/tailscale",
+    "-routes", "10.231.10.0/24",
+    "-smoke=true"
+  ],
+  "BaseVolumeSz": "128m",
+  "ManifestPassthrough": {
+    "en2": {
+      "ipaddr": "10.231.10.1",
+      "netmask": "255.255.255.0"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+build/
+artifacts/
+state/
+config/*.local.json
+*.img
+*.raw
+*.qcow2
+*.state
+*.key
+.env
