@@ -179,7 +179,20 @@ func main() {
 		log.Printf("active prefs: Hostname=%q AdvertiseRoutes=%v", prefs.Hostname, prefs.AdvertiseRoutes)
 	}
 
-	ticker := time.NewTicker(30 * time.Second)
+	logRuntime := func() {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+		active, total, denied := fwd.Stats()
+		log.Printf("runtime: heap_alloc=%.1fMiB heap_inuse=%.1fMiB sys=%.1fMiB goroutines=%d tcp_active=%d tcp_total=%d tcp_denied=%d",
+			float64(m.HeapAlloc)/(1024*1024),
+			float64(m.HeapInuse)/(1024*1024),
+			float64(m.Sys)/(1024*1024),
+			runtime.NumGoroutine(),
+			active, total, denied)
+	}
+	logRuntime()
+
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -193,9 +206,9 @@ func main() {
 				log.Printf("status check error: %v", err)
 				continue
 			}
-			active, total, denied := fwd.Stats()
-			log.Printf("health: BackendState=%s TailscaleIPs=%v tcp_active=%d tcp_total=%d tcp_denied=%d Health=%v",
-				st.BackendState, st.TailscaleIPs, active, total, denied, st.Health)
+			log.Printf("health: BackendState=%s TailscaleIPs=%v Health=%v",
+				st.BackendState, st.TailscaleIPs, st.Health)
+			logRuntime()
 		}
 	}
 }
