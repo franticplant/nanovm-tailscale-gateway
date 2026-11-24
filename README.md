@@ -13,22 +13,39 @@ Designed for Proxmox VE / QEMU/KVM environments where you want a dedicated, shel
 - **Not an exit node or UDP router:** `tsnet` does not expose a UDP fallback forwarding hook, and this appliance intentionally refuses default routes (`0.0.0.0/0` / `::/0`).
 - **Source IP semantics:** userspace TCP proxying means destination services see the gateway's VNet IP, while end-to-end SSH/TLS encryption is preserved.
 
-## Quick start (containerized, offline-capable)
+## Quick start
 
-Requires `podman`, `qemu-system-x86_64`, and `qemu-img`. All Go and OPS tooling runs inside plain temporary `podman run --rm` containers.
+### Using local Go, OPS, and QEMU
+
+Requires Go (matching `go.mod`), [NanoVMs OPS](https://ops.city/), and QEMU (`qemu-system-x86_64`, `qemu-img`).
 
 ```bash
-# 1. Fetch Go modules, OPS, and the pinned Nanos kernel into ~/.cache/
+# 1. Run tests
+go vet ./...
+go test -race ./...
+
+# 2. Build static Linux amd64 binary
+mkdir -p build
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o build/gateway ./cmd/gateway
+
+# 3. Build a Nanos smoke image and boot it under QEMU
+source config/versions.env
+ops update --version "$NANOS_VERSION"
+ops build build/gateway --nanos-version "$NANOS_VERSION" -c config/ops.smoke.json -i gateway-smoke
+./scripts/smoke-qemu.sh ~/.ops/images/gateway-smoke
+```
+
+### Containerized / reproducible builds (`podman` or `docker`)
+
+If you prefer not to install Go or OPS on your host, the `Makefile` runs both inside temporary containers (fetching into `~/.cache/` first, then building with `--network=none`):
+
+```bash
 make fetch
-
-# 2. Run Go vet + unit tests offline (--network=none)
 make vet test
-
-# 3. Build static amd64 binary + Nanos smoke image offline, then boot under QEMU
 make smoke
 ```
 
-See [docs/compatibility.md](docs/compatibility.md) for Nanos/tsnet runtime findings and [docs/architecture.md](docs/architecture.md) for the storage, multi-NIC, and update model.
+See [docs/compatibility.md](docs/compatibility.md) for Nanos/`tsnet` runtime findings and [docs/architecture.md](docs/architecture.md) for the storage, multi-NIC, and update model.
 
 ## CI/CD & Release Discipline
 
