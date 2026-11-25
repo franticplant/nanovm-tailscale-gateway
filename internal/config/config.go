@@ -122,7 +122,7 @@ func LoadJSON(path string, cfg *Config) error {
 }
 
 // ResolveAuthKey loads the Tailscale auth key from TS_AUTHKEY or AuthKeyFile if present.
-// Missing AuthKeyFile is only an error when explicitly configured.
+// A missing AuthKeyFile is ignored so reboots succeed after a one-shot authkey file is removed.
 func (c *Config) ResolveAuthKey() error {
 	if c.AuthKey != "" {
 		return nil
@@ -134,6 +134,9 @@ func (c *Config) ResolveAuthKey() error {
 	if c.AuthKeyFile != "" {
 		b, err := os.ReadFile(c.AuthKeyFile)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
 			return fmt.Errorf("reading authkey file %q: %w", c.AuthKeyFile, err)
 		}
 		c.AuthKey = strings.TrimSpace(string(b))

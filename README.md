@@ -45,7 +45,7 @@ make vet test
 make smoke
 ```
 
-See [docs/compatibility.md](docs/compatibility.md) for Nanos/`tsnet` runtime findings and [docs/architecture.md](docs/architecture.md) for the storage, multi-NIC, and update model.
+See [docs/proxmox-gui.md](docs/proxmox-gui.md) for the Proxmox VE GUI-only deployment recipe (`gw-state.qcow2` + generic `gateway.qcow2`), [docs/compatibility.md](docs/compatibility.md) for Nanos/`tsnet` runtime findings, and [docs/architecture.md](docs/architecture.md) for the storage, multi-NIC, and update model.
 
 ## CI/CD & Release Discipline
 

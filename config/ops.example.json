@@ -4,9 +4,7 @@
     "TS_LOGS_DIR": "/data/tailscale"
   },
   "Args": [
-    "-hostname", "nanos-tsnet-gateway",
-    "-state-dir", "/data/tailscale",
-    "-routes", "10.231.10.0/24,10.231.20.0/24"
+    "-config", "/data/config.json"
   ],
   "MapDirs": {
     "rootfs/*": "/"
@@ -15,14 +13,6 @@
     "readonly_rootfs": "t",
     "mounts": {
       "gw-state": "/data"
-    },
-    "en2": {
-      "ipaddr": "10.231.10.1",
-      "netmask": "255.255.255.0"
-    },
-    "en3": {
-      "ipaddr": "10.231.20.1",
-      "netmask": "255.255.255.0"
     }
   }
 }

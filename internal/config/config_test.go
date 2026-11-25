@@ -94,3 +94,15 @@ func TestResolveAuthKeyFromFile(t *testing.T) {
 		t.Fatalf("AuthKey=%q, want tskey-auth-example", cfg.AuthKey)
 	}
 }
+
+func TestResolveAuthKeyMissingFileIgnored(t *testing.T) {
+	t.Setenv("TS_AUTHKEY", "")
+	cfg := DefaultConfig()
+	cfg.AuthKeyFile = filepath.Join(t.TempDir(), "already-consumed-authkey")
+	if err := cfg.ResolveAuthKey(); err != nil {
+		t.Fatalf("expected missing AuthKeyFile to be ignored on reboot, got: %v", err)
+	}
+	if cfg.AuthKey != "" {
+		t.Fatalf("AuthKey=%q, want empty", cfg.AuthKey)
+	}
+}

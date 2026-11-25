@@ -87,9 +87,16 @@ func main() {
 		}
 	}
 
-	// Explicit flags/env override defaults (and JSON when provided).
-	cfg.Hostname = *hostname
-	cfg.StateDir = *stateDir
+	// Only explicitly provided flags or env vars override values from JSON config.
+	setFlags := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) { setFlags[f.Name] = true })
+
+	if setFlags["hostname"] || strings.TrimSpace(os.Getenv("GATEWAY_HOSTNAME")) != "" {
+		cfg.Hostname = *hostname
+	}
+	if setFlags["state-dir"] || strings.TrimSpace(os.Getenv("GATEWAY_STATE_DIR")) != "" {
+		cfg.StateDir = *stateDir
+	}
 	if *routesCSV != "" {
 		routes, err := config.ParseRoutes(*routesCSV)
 		if err != nil {
@@ -100,11 +107,21 @@ func main() {
 	if *authKeyFile != "" {
 		cfg.AuthKeyFile = *authKeyFile
 	}
-	cfg.Ephemeral = *ephemeral
-	cfg.Verbose = *verbose
-	cfg.Smoke = *smoke
-	cfg.DialTimeout = *dialTimeout
-	cfg.MaxConcurrent = *maxConcurrent
+	if setFlags["ephemeral"] || strings.TrimSpace(os.Getenv("GATEWAY_EPHEMERAL")) != "" {
+		cfg.Ephemeral = *ephemeral
+	}
+	if setFlags["verbose"] || strings.TrimSpace(os.Getenv("GATEWAY_VERBOSE")) != "" {
+		cfg.Verbose = *verbose
+	}
+	if setFlags["smoke"] || strings.TrimSpace(os.Getenv("GATEWAY_SMOKE")) != "" {
+		cfg.Smoke = *smoke
+	}
+	if setFlags["dial-timeout"] {
+		cfg.DialTimeout = *dialTimeout
+	}
+	if setFlags["max-concurrent"] {
+		cfg.MaxConcurrent = *maxConcurrent
+	}
 
 	if err := cfg.Validate(); err != nil {
 		log.Fatalf("invalid configuration: %v", err)
@@ -171,6 +188,15 @@ func main() {
 	status, err := srv.Up(upCtx)
 	if err != nil {
 		log.Fatalf("tsnet.Up failed: %v", err)
+	}
+
+	// Clean up one-shot authkey file once enrollment succeeds so it does not linger on /data.
+	if cfg.AuthKeyFile != "" && cfg.AuthKey != "" {
+		if err := os.Remove(cfg.AuthKeyFile); err != nil && !os.IsNotExist(err) {
+			log.Printf("warning: could not remove authkey file %q: %v", cfg.AuthKeyFile, err)
+		} else {
+			log.Printf("removed consumed authkey file %q", cfg.AuthKeyFile)
+		}
 	}
 
 	log.Printf("tsnet is UP! BackendState=%s TailscaleIPs=%v Self=%s",
